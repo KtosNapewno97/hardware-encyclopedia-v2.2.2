@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Laptop Components</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #f7f7f7; margin:0; padding:20px; text-align:center; }
+    h1 { margin-bottom: 20px; }
+
+    #button-panel {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 30px;
+    }
+    .component-btn {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 8px;
+        background-color: #007bff;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: transform 0.2s, background 0.2s;
+    }
+    .component-btn:hover {
+        transform: scale(1.1);
+        background-color: #0056b3;
+    }
+
+    #laptop-diagram {
+        position: relative;
+        margin: 0 auto 40px;
+        width: 700px;
+        height: 400px;
+    }
+    .highlight {
+        position: absolute;
+        border: 3px solid #ff5722;
+        background: rgba(255,87,34,0.2);
+        border-radius: 5px;
+        pointer-events: none;
+        transition: all 0.3s;
+    }
+
+    #info-box {
+        max-width:700px;
+        margin:0 auto;
+        background:#fff;
+        padding:20px;
+        border-radius:10px;
+        box-shadow:0 3px 10px rgba(0,0,0,0.1);
+        text-align:left;
+    }
+    #info-box img { max-width:100%; border-radius:10px; margin:10px 0; }
+    button.show-info {
+        display:block; margin:10px 0; padding:10px 20px; border:none; border-radius:5px; background:#007bff; color:white; font-size:16px; cursor:pointer;
+    }
+    .more-info { display:none; margin-top:10px; padding:10px; background:#d1e7ff; border-radius:5px; }
+</style>
+</head>
+<body>
+
+<h1>Interactive Laptop Components</h1>
+
+<div id="button-panel"></div>
+
+<div id="laptop-diagram"></div>
+
+<div id="info-box">
+    <p>Click a component button to see information from Wikipedia.</p>
+</div>
+
+<script>
+// Components with exact Wikipedia article titles
+const components = [
+    {name:"CPU", wikiTitle:"Central_processing_unit", x:220, y:50, w:80, h:40},
+    {name:"GPU", wikiTitle:"Graphics_processing_unit", x:220, y:100, w:80, h:40},
+    {name:"RAM", wikiTitle:"Computer_memory", x:100, y:50, w:100, h:30},
+    {name:"Screen", wikiTitle:"Display_device", x:150, y:10, w:400, h:80},
+    {name:"Keyboard", wikiTitle:"Computer_keyboard", x:150, y:200, w:400, h:50},
+    {name:"Hinges", wikiTitle:"Hinge_(mechanical)", x:140, y:90, w:420, h:20},
+    {name:"Battery", wikiTitle:"Rechargeable_battery", x:100, y:300, w:500, h:50},
+    {name:"Motherboard", wikiTitle:"Motherboard", x:50, y:100, w:500, h:120},
+    {name:"Sound card", wikiTitle:"Sound_card", x:50, y:230, w:80, h:40},
+    {name:"Network card", wikiTitle:"Network_interface_controller", x:150, y:230, w:80, h:40},
+    {name:"Hard disk drive", wikiTitle:"Hard_disk_drive", x:300, y:250, w:100, h:40},
+    {name:"Solid-state drive", wikiTitle:"Solid-state_drive", x:420, y:250, w:100, h:40},
+    {name:"PCI Express", wikiTitle:"PCI_Express", x:400, y:150, w:80, h:30},
+    {name:"USB", wikiTitle:"USB", x:550, y:270, w:40, h:20},
+    {name:"3.5 mm jack", wikiTitle:"Audio_jack", x:600, y:260, w:30, h:20},
+    {name:"2.5 mm connector", wikiTitle:"Jack_connector", x:630, y:260, w:30, h:20},
+    {name:"Headphones", wikiTitle:"Headphones", x:600, y:100, w:60, h:40},
+    {name:"Speakers", wikiTitle:"Loudspeaker", x:600, y:150, w:60, h:60}
+];
+
+const buttonPanel = document.getElementById('button-panel');
+const diagram = document.getElementById('laptop-diagram');
+const infoBox = document.getElementById('info-box');
+
+// Create buttons
+components.forEach(c => {
+    const btn = document.createElement('button');
+    btn.textContent = c.name;
+    btn.classList.add('component-btn');
+    btn.addEventListener('click', () => selectComponent(c));
+    buttonPanel.appendChild(btn);
+});
+
+// Highlight div
+let highlightDiv = document.createElement('div');
+highlightDiv.classList.add('highlight');
+diagram.appendChild(highlightDiv);
+highlightDiv.style.display = 'none';
+
+// Fetch Wikipedia info
+async function getWikipediaInfo(title) {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=extracts|pageimages&format=json&origin=*&exintro=1&piprop=original`;
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const page = Object.values(data.query.pages)[0];
+        return {
+            text: page.extract || "No description available.",
+            image: page.original ? page.original.source : ''
+        };
+    } catch(e){
+        console.error(e);
+        return {text:"Error fetching data.", image: ''};
+    }
+}
+
+// Select component
+async function selectComponent(c) {
+    highlightDiv.style.display = 'block';
+    highlightDiv.style.left = c.x+'px';
+    highlightDiv.style.top = c.y+'px';
+    highlightDiv.style.width = c.w+'px';
+    highlightDiv.style.height = c.h+'px';
+
+    infoBox.innerHTML = `<p>Fetching information for <strong>${c.name}</strong>...</p>`;
+    const info = await getWikipediaInfo(c.wikiTitle);
+    infoBox.innerHTML = `
+        <h2>${c.name}</h2>
+        ${info.image ? `<img src="${info.image}" alt="${c.name}">` : ''}
+        <p>${info.text}</p>
+        <button class="show-info">Show more details</button>
+        <div class="more-info">
+            <p>Full article: <a href="https://en.wikipedia.org/wiki/${c.wikiTitle}" target="_blank">Wikipedia</a></p>
+        </div>
+    `;
+}
+
+// Show more button
+document.addEventListener('click', e => {
+    if(e.target.classList.contains('show-info')){
+        const div = e.target.nextElementSibling;
+        div.style.display = div.style.display === 'block' ? 'none' : 'block';
+    }
+});
+</script>
+
+</body>
+</html>
